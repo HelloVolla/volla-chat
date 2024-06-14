@@ -42,7 +42,6 @@ jobs:
       - name: Retrieve version
         run: |
           echo "APP_VERSION=$(cat src-tauri/tauri.conf.json | grep -oP '(?<="version": ")[^"]*')" >> $GITHUB_OUTPUT
-          echo "HOLOCHAIN_VERSION=$(cat moss.config.json | grep -oP '(?<="holochainVersion": ")[^"]*')" >> $GITHUB_OUTPUT
         id: version
 
       - id: create-release
@@ -50,7 +49,7 @@ jobs:
         with:
           allowUpdates: true
           artifacts: 'workdir/relay.happ'
-          body: 'Compiled for Holochain: ${{ HOLOCHAIN_VERSION }}\n See assets below to download and install this version.'
+          body: 'See assets below to download and install this version.'
           name: Relay v${{ steps.version.outputs.APP_VERSION }}
           tag: v${{ steps.version.outputs.APP_VERSION }}
           prerelease: true
