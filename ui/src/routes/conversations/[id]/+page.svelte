@@ -79,6 +79,7 @@
   }
 
   function handleResize() {
+    console.log("Resizing in conversation handleResize", window, window.innerHeight);
     if (scrollAtBottom) {
       scrollToBottom();
     }
@@ -100,6 +101,37 @@
       checkForMessages()
       conversationContainer.addEventListener('scroll', handleScroll);
       window.addEventListener('resize', debouncedHandleResize);
+
+      console.log("Mounting conversation", window, window.innerHeight)
+      const wrapper = document.querySelector('.wrapper'); // Assuming there's a wrapper element with class 'wrapper'
+      if (wrapper) {
+        (wrapper as HTMLElement).style.height = `${window.innerHeight}px`;
+        console.log("mounting conversation", window.innerHeight)
+      }
+
+      window.addEventListener('resize', () => {
+				console.log("Resizing in conversation", window, window.innerHeight);
+				const wrapper = document.querySelector('.wrapper'); // Assuming there's a wrapper element with class 'wrapper'
+        if (wrapper) {
+          (wrapper as HTMLElement).style.height = `${window.innerHeight}px`;
+        }
+			});
+
+      document.addEventListener('resize', () => {
+				console.log("Resizing in conversation document", window.innerHeight);
+        const wrapper = document.querySelector('.wrapper'); // Assuming there's a wrapper element with class 'wrapper'
+        if (wrapper) {
+          (wrapper as HTMLElement).style.height = `${window.innerHeight}px`;
+        }
+			});
+
+      const container = document.querySelector('.container');
+      console.log("container", container)
+      container && container.addEventListener('resize', () => {
+				console.log("Resizing in conversation container", window.innerHeight);
+        (container as HTMLElement).style.height = `${window.innerHeight}px`;
+			});
+
       newMessageInput.focus();
       conversation.setOpen(true)
       conversation.setUnread(false)
@@ -386,7 +418,7 @@
     </div>
   </div>
   <div class="w-full p-2 bg-tertiary-500 dark:bg-secondary-500 flex-shrink-0">
-    <form class="flex" method='POST' on:submit={sendMessage} >
+    <form class="flex m-0" method='POST' on:submit={sendMessage} >
       <input type="file" accept="image/jpeg, image/png, image/gif" multiple id="images" class='hidden' on:change={handleImagesSelected} />
       <label for="images" class='cursor-pointer flex'>
         <SvgIcon icon='image' color={$modeCurrent ? '%232e2e2e' : 'white'} size='26' moreClasses='ml-3' />

@@ -7,6 +7,7 @@
 	import { t } from '$lib/translations';
 	import { RelayClient } from '$store/RelayClient';
 	import { RelayStore } from '$store/RelayStore';
+	import { Window } from "@tauri-apps/api/window";
 
 	import '../app.postcss';
 
@@ -26,20 +27,69 @@
 	let appHeight: number;
 
 	function updateAppHeight() {
+		console.log("Updating app height to", window.innerHeight)
 		appHeight = window.innerHeight;
-		document.documentElement.style.setProperty('--app-height', `${appHeight}px`);
-  }
+		const wrapper = document.querySelector('.wrapper'); // Assuming there's a wrapper element with class 'wrapper'
+		if (wrapper) {
+			(wrapper as HTMLElement).style.height = `${appHeight}px`;
+		}
+	}
 
-	document.addEventListener('DOMContentLoaded', () => {
-	// This will wait for the window to load, but you could
-	// run this function on whatever trigger you want
-	//invoke('close_splashscreen')
-	})
+	// Prevent internal links from opening in the browser when using Tauri
+	const handleLinkClick = (event: MouseEvent) => {
+		const target = event.target as HTMLElement;
+		// Ensure the clicked element is an anchor and has a href attribute
+		if (target.closest('a[href]')) {
+			// Prevent default action
+			event.preventDefault();
+			event.stopPropagation();
+
+			const anchor = target.closest('a') as HTMLAnchorElement;
+			let link = anchor.getAttribute('href')
+			if (anchor && anchor.href.startsWith(window.location.origin) && !anchor.getAttribute('rel')?.includes('noopener')) {
+				return goto(anchor.pathname); // Navigate internally using SvelteKit's goto
+			} else if (anchor && link) {
+				// Handle external links using Tauri's API
+				if (!link.includes('://')) {
+					link = `https://${link}`
+				}
+				const { open } = window.__TAURI_PLUGIN_SHELL__
+				open(link)
+			}
+		}
+	};
+
+	// document.addEventListener('DOMContentLoaded', () => {
+	// 	console.log("DOMContent loaded")
+	// 	updateAppHeight()
+
+	// 	// This will wait for the window to load, but you could
+	// 	// run this function on whatever trigger you want
+	// 	//invoke('close_splashscreen')
+	// })
 
 	onMount(() => {
+		console.log("Mounting layoutxxx", window)
+		//setTimeout(updateAppHeight, 300) // XXX: doing here and in DOMContentLoaded to make sure it's set
+		setTimeout(() => {
+			console.log("timeout done", window, window.addEventListener)
+      updateAppHeight();
+			window.addEventListener('resize', () => {
+				console.log("Resizing");
+				updateAppHeight();
+			});
+    }, 700);
+		//window.addEventListener('resize', () => { console.log("Resizing"); updateAppHeight(); });
+    document.addEventListener('click', handleLinkClick);
+
+		window.addEventListener('load', () => {
+			console.log("window loaded")
+			// Manually dispatch the resize event after the app fully loads
+			setTimeout(() => { console.log("Dispatching resize event"); window.dispatchEvent(new Event('resize')); }, 1000);
+		});
+
 		async function initHolochain() {
-			// console.log("FISH", window.__TAURI__)
-			 //await invoke('close_splashscreen')
+			//await invoke('close_splashscreen')
 
 			let tokenResp
 			if (adminPort) {
@@ -78,37 +128,10 @@
 			setMode(mql.matches)
 		}
 
-		// Prevent internal links from opening in the browser when using Tauri
-		const handleLinkClick = (event: MouseEvent) => {
-			const target = event.target as HTMLElement;
-			// Ensure the clicked element is an anchor and has a href attribute
-			if (target.closest('a[href]')) {
-				// Prevent default action
-				event.preventDefault();
-				event.stopPropagation();
-
-        const anchor = target.closest('a') as HTMLAnchorElement;
-				let link = anchor.getAttribute('href')
-				if (anchor && anchor.href.startsWith(window.location.origin) && !anchor.getAttribute('rel')?.includes('noopener')) {
-					return goto(anchor.pathname); // Navigate internally using SvelteKit's goto
-				} else if (anchor && link) {
-					// Handle external links using Tauri's API
-					if (!link.includes('://')) {
-						link = `https://${link}`
-					}
-					const { open } = window.__TAURI_PLUGIN_SHELL__
-					open(link)
-				}
-      }
-    };
-
-		setTimeout(updateAppHeight, 300)
-		window.addEventListener('resize', updateAppHeight);
-
-    document.addEventListener('click', handleLinkClick);
-    return () => {
+		return () => {
+			console.log("unmounting layout")
       document.removeEventListener('click', handleLinkClick);
-			window.removeEventListener('resize', updateAppHeight);
+			// window.removeEventListener('resize', updateAppHeight);
     };
 	})
 
@@ -162,8 +185,11 @@
 	.wrapper {
 		max-width: 1000px;
 		margin: 0 auto;
-		height: var(--app-height);
 		overflow-y: auto;
+		/* min-height: 100vh;
+		min-height: -moz-available;
+		min-height: -webkit-fill-available;
+		min-height: fill-available; */
 	}
 
 	.wrapper.full-screen {
