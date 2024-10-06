@@ -53,7 +53,7 @@ jobs:
         run: |
           set -e
           nix develop .#androidDev --no-update-lock-file --command bash -c "npm run tauri android build -- --apk --target aarch64"
-          SERVER_URL="root@volla.tech"
+          SERVER_URL="drone@volla.tech"
           LOCAL_APK_PATH="/home/runner/work/relay/relay/src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release.apk"
           REMOTE_APK_NIGHTLY_PATH="/var/www/holochain-fdroid-nightly.volla.tech/fdroid/repo"
           REMOTE_APK_PATH="/var/www/holochain-fdroid.volla.tech/fdroid/repo"
