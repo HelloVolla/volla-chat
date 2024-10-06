@@ -1,0 +1,67 @@
+name: "android-app"
+on:
+  workflow_dispatch:
+  pull_request:
+      branches:
+          - "release" 
+      types: [closed]
+
+jobs:
+  android-app:
+    if: github.event.pull_request.merged == true
+    permissions: write-all
+    environment: Tagged Release
+
+    runs-on: 'ubuntu-22.04' 
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Extend space
+        uses: ./.github/actions/extend-space
+
+      - name: Install nix
+        uses: cachix/install-nix-action@v27
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+          nix_path: nixpkgs=channel:nixos-24.05
+
+      - uses: cachix/cachix-action@v15
+        with:
+          name: holochain-ci
+
+      - uses: cachix/cachix-action@v15
+        with:
+          name: holochain-open-dev
+
+      - uses: cachix/cachix-action@v15
+        with:
+          name: darksoil-studio
+
+      - name: Prep
+        run: |
+          nix develop --no-update-lock-file --command npm install
+
+      - name: setup Android signing
+        run: |
+          cd src-tauri/gen/android
+          echo "keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}" > keystore.properties
+          echo "password=${{ secrets.ANDROID_KEY_PASSWORD }}" >> keystore.properties
+          base64 -d <<< "${{ secrets.ANDROID_KEY_BASE64 }}" > $RUNNER_TEMP/keystore.jks
+          echo "storeFile=$RUNNER_TEMP/keystore.jks" >> keystore.properties
+      
+      - name: Build and Deploy
+        run: |
+          nix develop .#androidDev --no-update-lock-file --command bash -c "npm run tauri android build -- --apk --target aarch64"
+          SERVER_URL="root@volla.tech"
+          LOCAL_APK_PATH="/home/runner/work/relay/relay/src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release.apk"
+          REMOTE_APK_NIGHTLY_PATH="/var/www/holochain-fdroid-nightly.volla.tech/fdroid/repo"
+          REMOTE_APK_PATH="/var/www/holochain-fdroid.volla.tech/fdroid/repo"
+
+          echo "${{ secrets.FDROID_DEPLOY_KEY }}" | base64 -d > temp
+          chmod 0400 temp
+          scp -o StrictHostKeyChecking=accept-new -i temp ${LOCAL_APK_PATH} ${SERVER_URL}:${REMOTE_APK_PATH}/org.holochain.relay.apk
+      
+      - name: Tagging
+        run: |
+          VERSION=$(grep '^version =' Cargo.toml | sed 's/version = "//; s/"//g')
+          git tag ${VERSION} && git push --tags
