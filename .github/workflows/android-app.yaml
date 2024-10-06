@@ -51,6 +51,7 @@ jobs:
       
       - name: Build and Deploy
         run: |
+          set -e
           nix develop .#androidDev --no-update-lock-file --command bash -c "npm run tauri android build -- --apk --target aarch64"
           SERVER_URL="root@volla.tech"
           LOCAL_APK_PATH="/home/runner/work/relay/relay/src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release.apk"
@@ -60,6 +61,7 @@ jobs:
           echo "${{ secrets.FDROID_DEPLOY_KEY }}" | base64 -d > temp
           chmod 0400 temp
           scp -o StrictHostKeyChecking=accept-new -i temp ${LOCAL_APK_PATH} ${SERVER_URL}:${REMOTE_APK_PATH}/org.holochain.relay.apk
+          ssh -i temp "${SERVER_URL}" -o StrictHostKeyChecking=accept-new -f /opt/services/fdroid-updater/update-repositories.sh
       
       - name: Tagging
         run: |
